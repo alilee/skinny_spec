@@ -97,6 +97,9 @@ module LuckySneaks # :nodoc:
     # <b>:format</b>:: Format of the request. Used to only add <tt>to_xml</tt> and 
     #                  <tt>to_json</tt> when actually needed.
     # <b>:stub</b>::   Additional methods to stub on the instances
+    # <b>:current_object</b>:: If set to true, <tt>find</tt> will set <tt>params[:id]</tt>
+    #                          using the <tt>id</tt> of the <tt>mock_model</tt> instance
+    #                          and use that value as an argument when stubbing <tt>find</tt>
     # 
     # Any additional options will be passed as arguments to <tt>find</tt>.You will want
     # to make sure to pass those arguments to the <tt>it_should_find</tt> spec as well.
@@ -120,7 +123,7 @@ module LuckySneaks # :nodoc:
         if find_method = options.delete(:find_method)
           klass.stub!(find_method).and_return(member)
         else
-        # Stubbing string and non-string just to be safe
+          # Stubbing string and non-string just to be safe
           klass.stub!(:find).with(member.id).and_return(member)
           klass.stub!(:find).with(member.id.to_s).and_return(member)
           unless options.empty?
@@ -131,6 +134,9 @@ module LuckySneaks # :nodoc:
       end
     end
     
+    # <b>Note:</b> Use of this method with :child options (to mock
+    # association) is deprecated. Please use <tt>stub_association</tt>.
+    # 
     # Same as <tt>stub_find_one</tt> but setups the instance as the parent
     # of the specified association. Example:
     # 
@@ -146,10 +152,13 @@ module LuckySneaks # :nodoc:
     #     @comments = @document.comments.find(:all)
     #   end
     def stub_parent(klass, options = {})
-      offspring = options.delete(:child)
       returning stub_find_one(klass, options) do |member|
         params[klass.name.foreign_key] = member.id
-        member.stub!(offspring).and_return(class_for(offspring))
+        if offspring = options.delete(:child)
+          puts "stub_parent with :child option has been marked for deprecation"
+          puts "please use stub_association to create the mock instead"
+          member.stub!(offspring).and_return(class_for(offspring))
+        end
       end
     end
     
@@ -186,6 +195,20 @@ module LuckySneaks # :nodoc:
     def stub_formatted(object, format)
       return unless format
       object.stub!("to_#{format}").and_return("#{object.class} formatted as #{format}")
+    end
+    
+    # Creates a mock object representing an association proxy, stubs the appropriate 
+    # method on the parent object and returns that association proxy.
+    # Accepts the following option:
+    # 
+    # <b>:stub</b>::   Additional methods to stub on the mock proxy object
+    def stub_association(object, association, options = {})
+      # I know options isn't implemented anywhere
+      object_name = instance_variables.select{|name| instance_variable_get(name) == object}
+      returning mock("Association proxy for #{object_name}.#{association}") do |proxy|
+        stub_out proxy, options[:stub] if options[:stub]
+        object.stub!(association).and_return(proxy)
+      end
     end
     
   private

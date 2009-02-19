@@ -43,7 +43,7 @@ module LuckySneaks
       args = []
       unless options.delete(:only_method)
         args << argument unless argument.nil?
-        args << hash_including(options) unless options.blank?
+        args << hash_including(options) unless options.empty?
       end
       method = options.delete(:find_method) if options[:find_method]
       if args.empty?
@@ -260,7 +260,7 @@ module LuckySneaks
       # isn't the right helper method and you should write out the two expectations separately.
       def it_should_find_and_assign(*names)
         names.each do |name|
-          it_should_find name
+          it_should_find name, :only_method => true
           it_should_assign name
         end
       end
@@ -323,7 +323,7 @@ module LuckySneaks
       # instance is found but not saved, just use <tt>it_should_find_and_assign</tt>.
       def it_should_find_and_update(*names)
         names.each do |name|
-          it_should_find name
+          it_should_find name, :only_method => true
           it_should_update name
         end
       end
@@ -333,14 +333,14 @@ module LuckySneaks
       # isn't the right helper method and you should write out the two expectations separately.
       def it_should_find_and_destroy(*names)
         names.each do |name|
-          it_should_find name
+          it_should_find name, :only_method => true
           it_should_destroy name
         end
       end
 
-      # Creates an expectation that the specified collection (<tt>flash</tt> or <tt>session</tt>)
-      # contains the specified key and value. To specify that the collection should be set
-      # to <tt>nil</tt>, specify the value as :nil instead.
+      # Creates an expectation that the specified collection (<tt>flash</tt>, <tt>session</tt>,
+      # <tt>params</tt>, <tt>cookies</tt>) contains the specified key and value. To specify that
+      # the collection should be set to <tt>nil</tt>, specify the value as :nil instead.
       def it_should_set(collection, key, value = nil, &block)
         it "should set #{collection}[:#{key}]" do
           # Allow flash.now[:foo] to remain in the flash
@@ -365,6 +365,11 @@ module LuckySneaks
       def it_should_set_flash(name, value = nil, &block)
         it_should_set :flash, name, value, &block
       end
+      
+      # Wraps <tt>it_should_set :flash, :nil</tt>.
+      def it_should_not_set_flash(name)
+        it_should_set :flash, name, :nil
+      end
 
       # Wraps <tt>it_should_set :session</tt>. To specify that the collection should be set
       # to <tt>nil</tt>, specify the value as :nil instead.
@@ -372,10 +377,31 @@ module LuckySneaks
         it_should_set :session, name, value, &block
       end
       
+      # Wraps <tt>it_should_set :session, :nil</tt>.
+      def it_should_not_set_session(name)
+        it_should_set :session, name, :nil
+      end
+      
       # Wraps <tt>it_should_set :params</tt>. To specify that the collection should be set
       # to <tt>nil</tt>, specify the value as :nil instead.
       def it_should_set_params(name, value = nil, &block)
         it_should_set :params, name, value, &block
+      end
+      
+      # Wraps <tt>it_should_set :params, :nil</tt>.
+      def it_should_not_set_params(name)
+        it_should_set :params, name, :nil
+      end
+      
+      # Wraps <tt>it_should_set :cookies</tt>. To specify that the collection should be set
+      # to <tt>nil</tt>, specify the value as :nil instead.
+      def it_should_set_cookies(name, value = nil, &block)
+        it_should_set :cookies, name, value, &block
+      end
+      
+      # Wraps <tt>it_should_set :cookies, :nil</tt>.
+      def it_should_not_set_cookies(name)
+        it_should_set :cookies, name, :nil
       end
       
       # Wraps the various <tt>it_should_render_<i>foo</i></tt> methods:
