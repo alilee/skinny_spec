@@ -195,11 +195,11 @@ module LuckySneaks
     
   private
     def class_or_instance
-      @model_spec_class_or_instance ||= class_for(class_description_text) || instance
+      @model_spec_class_or_instance ||= class_for(described_type) || instance
     end
     
     def instance
-      @model_spec_instance ||= instance_for(class_description_text)
+      @model_spec_instance ||= instance_for(described_type)
     end
     
     # These methods are designed to be used at the example group [read: "describe"] level
@@ -351,7 +351,27 @@ module LuckySneaks
           instance.errors_on(attribute).should_not include(message)
         end
       end
-      
+            
+      # Creates an expectation that the current model being spec'd <tt>validates_inclusion_of</tt>
+      # the specified attribute. Takes an optional custom message to match the one in the model's
+      # validation.     
+      def it_should_validate_inclusion_of(attribute, options = {}, message = default_error_message(:inclusion))
+       it "should validate #{attribute} is in #{options[:in].to_s}" do
+         # We specifically do not try to go below the range on String and character ranges because that problem set is unpredictable. 
+         lower  = options[:in].first.respond_to?(:-) ? options[:in].first - 0.0001 : nil
+         higher = options[:in].last.succ 
+         
+         instance.send "#{attribute}=", lower
+         instance.errors_on(attribute).should include(message)
+
+         instance.send "#{attribute}=", higher
+         instance.errors_on(attribute).should include(message)
+
+         instance.send "#{attribute}=", (lower+higher)/2
+         instance.errors_on(attribute).should_not include(message)
+       end
+     end
+
       # Creates an expectation that the current model being spec'd <tt>validates_numericality_of</tt>
       # the specified attribute. Takes an optional custom message to match the one in the model's
       # validation.
@@ -417,7 +437,7 @@ module LuckySneaks
       # valid for the specified attribute. This is most likely used with <tt>validates_format_of</tt>
       # but there's nothing saying it couldn't be another validation.
       def it_should_accept_as_valid(attribute, *values)
-        values.each do |value|
+        values.flatten.each do |value|
           value_inspect = case value
             when String : "'#{value}'"
             when NilClass : "nil"
@@ -437,7 +457,7 @@ module LuckySneaks
       # spec'ing the actual error message.
       def it_should_not_accept_as_valid(attribute, *values)
         options = values.extract_options!
-        values.each do |value|
+        values.flatten.each do |value|
           value_inspect = case value
             when String : "'#{value}'"
             when NilClass : "nil"
